@@ -57,12 +57,18 @@ export default function DeliveryTable({ records, onEditClick, onDeleteClick }) {
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                         record.status === 'Sent'
                           ? 'bg-[#e6f4ea] text-[#137333] border-[#ceead6]'
+                          : record.status === 'Error' || record.status === 'Failed'
+                          ? 'bg-red-50 text-red-700 border-red-100'
                           : 'bg-[#fef7e0] text-[#b06000] border-[#fde293]'
                       }`}
                     >
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          record.status === 'Sent' ? 'bg-[#137333]' : 'bg-[#b06000]'
+                          record.status === 'Sent'
+                            ? 'bg-[#137333]'
+                            : record.status === 'Error' || record.status === 'Failed'
+                            ? 'bg-red-600'
+                            : 'bg-[#b06000]'
                         }`}
                       />
                       {record.status}
