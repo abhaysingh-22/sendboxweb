@@ -1,1 +1,8 @@
 @import "tailwindcss";
+
+/* Fix: Tailwind v4 Preflight resets all margins to 0, which breaks
+   the browser's native <dialog> centering (it relies on margin: auto).
+   Restore it explicitly. */
+dialog[open] {
+  margin: auto;
+}
