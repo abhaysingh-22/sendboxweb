@@ -56,11 +56,11 @@ serve(async (req) => {
 
       // WhatsApp API template request
       const whatsappResponse = await fetch(
-        `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+        `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${META_ACCESS_TOKEN}`,
+            Authorization: `Bearer ${META_ACCESS_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -68,17 +68,11 @@ serve(async (req) => {
             to: phone,
             type: "template",
             template: {
-              name: "your_template_name", // Replace with your approved template name
-              language: { code: "en_US" },
-              components: [
-                {
-                  type: "body",
-                  parameters: [
-                    { type: "text", text: record.full_name }
-                  ]
-                }
-              ]
-            }
+              name: "birthday_wishes",
+              language: {
+                code: "en",
+              },
+            },
           }),
         }
       );

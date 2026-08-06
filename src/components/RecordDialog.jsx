@@ -54,7 +54,7 @@ export default function RecordDialog({
             required
             value={formData.phone}
             onChange={(e) => onChange({ ...formData, phone: e.target.value })}
-            placeholder="e.g. 8539885637"
+            placeholder="e.g. 9878765676"
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
           />
         </div>
