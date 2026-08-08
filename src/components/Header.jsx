@@ -1,7 +1,7 @@
 import React from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, LogOut } from 'lucide-react';
 
-export default function Header({ onAddClick, onDeleteAllClick, onUploadClick, fileInputRef, onFileUpload }) {
+export default function Header({ onAddClick, onDeleteAllClick, onUploadClick, fileInputRef, onFileUpload, onLogout }) {
   return (
     <header className="bg-white border-b border-gray-100 px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <h1 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -31,6 +31,16 @@ export default function Header({ onAddClick, onDeleteAllClick, onUploadClick, fi
         >
           <Upload className="w-4 h-4" />
           Upload CSV / XLSX
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 active:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer inline-flex"
+          aria-label="Sign Out"
+          title="Sign Out"
+        >
+          <LogOut className="w-5 h-5" />
         </button>
 
         {/* Hidden File Input */}

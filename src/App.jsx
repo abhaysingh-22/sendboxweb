@@ -5,6 +5,7 @@ import DeliveryTable from './components/DeliveryTable';
 import RecordDialog from './components/RecordDialog';
 import DeleteDialog from './components/DeleteDialog';
 import DeleteAllDialog from './components/DeleteAllDialog';
+import Login from './components/Login';
 import Toast from './components/Toast';
 import { parseCSV } from './utils/csvParser';
 import {
@@ -41,6 +42,9 @@ function mapRow(row) {
 }
 
 export default function App() {
+  // Authentication state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   // Records state — populated from Supabase on mount
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,10 +108,27 @@ export default function App() {
     setLoading(false);
   };
 
-  // Fetch when page changes
+  // Check active session on mount
   useEffect(() => {
-    refreshData(currentPage);
-  }, [currentPage]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsLoggedIn(true);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch when page changes and user is logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      refreshData(currentPage);
+    }
+  }, [currentPage, isLoggedIn]);
 
   // Show Toast Helper
   const showToast = (type, message) => {
@@ -429,6 +450,21 @@ export default function App() {
     fileInputRef.current?.click();
   };
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#090b11] font-sans antialiased">
+        <Login onLoginSuccess={() => setIsLoggedIn(true)} showToast={showToast} />
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#fafbfc] text-gray-800 font-sans antialiased">
       {/* Header Container */}
@@ -438,6 +474,11 @@ export default function App() {
         onUploadClick={triggerFileInput}
         fileInputRef={fileInputRef}
         onFileUpload={handleFileUpload}
+        onLogout={async () => {
+          await supabase.auth.signOut();
+          setIsLoggedIn(false);
+          showToast('info', 'Logged out successfully.');
+        }}
       />
 
       {/* Main Section */}
