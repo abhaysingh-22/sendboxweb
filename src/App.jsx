@@ -11,6 +11,7 @@ import { parseCSV } from './utils/csvParser';
 import {
   fetchRecordsPaginated,
   fetchStats,
+  fetchAllPhoneNumbers,
   checkPhoneExists,
   insertRecord,
   bulkInsertRecords,
@@ -95,14 +96,15 @@ export default function App() {
     }
 
     // 2. Fetch stats globally
-    const { data: statusData, error: statsError } = await fetchStats();
+    const { data: statsData, error: statsError } = await fetchStats();
     if (statsError) {
       console.error('Failed to fetch stats:', statsError);
-    } else {
-      const total = statusData.length;
-      const sent = statusData.filter(r => r.status === 'Sent').length;
-      const pending = statusData.filter(r => r.status === 'Pending').length;
-      setStats({ total, sent, pending });
+    } else if (statsData) {
+      setStats({
+        total: statsData.total ?? 0,
+        sent: statsData.sent ?? 0,
+        pending: statsData.pending ?? 0,
+      });
     }
 
     setLoading(false);
@@ -391,10 +393,8 @@ export default function App() {
         return;
       }
 
-      // Fetch all existing phone numbers to check for duplicate phone numbers in DB
-      const { data: existing, error: fetchErr } = await supabase
-        .from('records')
-        .select('phone_number');
+      // Fetch all existing phone numbers to check for duplicate phone numbers in DB (paginated to support >1000 rows)
+      const { data: existingPhonesList, error: fetchErr } = await fetchAllPhoneNumbers();
 
       if (fetchErr) {
         showToast('error', `Failed to verify existing records: ${fetchErr.message}`);
@@ -402,7 +402,7 @@ export default function App() {
         return;
       }
 
-      const existingPhones = new Set((existing || []).map(r => r.phone_number));
+      const existingPhones = new Set(existingPhonesList || []);
 
       // Separate new records into to-insert and duplicates
       const toInsert = [];

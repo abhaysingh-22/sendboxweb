@@ -20,15 +20,74 @@ export async function fetchRecordsPaginated(page = 1, limit = 15) {
 }
 
 /**
- * Fetch all statuses of records from the database to compute global stats.
- * @returns {Promise<{ data: Array|null, error: object|null }>}
+ * Fetch all stats of records from the database to compute global stats accurately.
+ * Uses PostgREST exact counts (head: true) to avoid row-fetching limits (default 1000 limit).
+ * @returns {Promise<{ data: { total: number, sent: number, pending: number }|null, error: object|null }>}
  */
 export async function fetchStats() {
-  const { data, error } = await supabase
-    .from('records')
-    .select('status');
+  try {
+    const [totalRes, sentRes, pendingRes] = await Promise.all([
+      supabase.from('records').select('*', { count: 'exact', head: true }),
+      supabase.from('records').select('*', { count: 'exact', head: true }).eq('status', 'Sent'),
+      supabase.from('records').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
+    ]);
 
-  return { data, error };
+    if (totalRes.error) {
+      return { data: null, error: totalRes.error };
+    }
+
+    const total = totalRes.count ?? 0;
+    const sent = sentRes.count ?? 0;
+    const pending = pendingRes.count ?? (total - sent);
+
+    return {
+      data: {
+        total,
+        sent,
+        pending,
+      },
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: err };
+  }
+}
+
+/**
+ * Fetch all existing phone numbers across all pages to bypass the 1000-row PostgREST limit.
+ * @returns {Promise<{ data: string[]|null, error: object|null }>}
+ */
+export async function fetchAllPhoneNumbers() {
+  let allPhones = [];
+  let from = 0;
+  const step = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('records')
+      .select('phone_number')
+      .range(from, from + step - 1);
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data && data.length > 0) {
+      for (const r of data) {
+        if (r.phone_number) allPhones.push(r.phone_number);
+      }
+      if (data.length < step) {
+        hasMore = false;
+      } else {
+        from += step;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return { data: allPhones, error: null };
 }
 
 /**
@@ -73,11 +132,12 @@ export async function insertRecord(record) {
 }
 
 /**
- * Bulk insert records (used for CSV upload).
+ * Bulk insert records (used for CSV upload) in batches to avoid payload and response limits.
  * @param {Array<{ full_name: string, phone_number?: string, dob?: string }>} records
+ * @param {number} [batchSize=500]
  * @returns {Promise<{ data: Array|null, error: object|null, count: number }>}
  */
-export async function bulkInsertRecords(records) {
+export async function bulkInsertRecords(records, batchSize = 500) {
   const rows = records.map(r => ({
     full_name: r.full_name,
     phone_number: r.phone_number || '',
@@ -85,12 +145,20 @@ export async function bulkInsertRecords(records) {
     status: 'Pending',
   }));
 
-  const { data, error } = await supabase
-    .from('records')
-    .insert(rows)
-    .select();
+  let insertedCount = 0;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { error } = await supabase
+      .from('records')
+      .insert(batch);
 
-  return { data, error, count: data ? data.length : 0 };
+    if (error) {
+      return { data: null, error, count: insertedCount };
+    }
+    insertedCount += batch.length;
+  }
+
+  return { data: null, error: null, count: insertedCount };
 }
 
 /**
