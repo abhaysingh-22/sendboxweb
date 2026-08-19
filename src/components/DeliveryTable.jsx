@@ -11,7 +11,12 @@ function getInitials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-export default function DeliveryTable({ records, onEditClick, onDeleteClick }) {
+export default function DeliveryTable({
+  records,
+  onEditClick,
+  onDeleteClick,
+  statusFilter = 'ALL',
+}) {
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
       <div className="overflow-x-auto">
@@ -103,7 +108,11 @@ export default function DeliveryTable({ records, onEditClick, onDeleteClick }) {
                 <td colSpan="6" className="py-12 text-center text-gray-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <AlertCircle className="w-8 h-8 text-gray-300" />
-                    <span>No records found. Click "Add New Record" or upload a CSV to get started!</span>
+                    <span>
+                      {statusFilter && statusFilter !== 'ALL'
+                        ? `No records found with status "${statusFilter}".`
+                        : 'No records found. Click "Add New Record" or upload a CSV to get started!'}
+                    </span>
                   </div>
                 </td>
               </tr>

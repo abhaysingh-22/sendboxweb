@@ -1,18 +1,25 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Fetch records from the Supabase `records` table with server-side pagination.
+ * Fetch records from the Supabase `records` table with server-side pagination and optional status filter.
  * @param {number} page - Page number (1-indexed)
  * @param {number} limit - Number of records per page (default 15)
+ * @param {string} [statusFilter='ALL'] - Status filter ('ALL' | 'Sent' | 'Pending')
  * @returns {Promise<{ data: Array|null, error: object|null, count: number|null }>}
  */
-export async function fetchRecordsPaginated(page = 1, limit = 15) {
+export async function fetchRecordsPaginated(page = 1, limit = 15, statusFilter = 'ALL') {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('records')
-    .select('*', { count: 'exact' })
+    .select('*', { count: 'exact' });
+
+  if (statusFilter && statusFilter !== 'ALL') {
+    query = query.eq('status', statusFilter);
+  }
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to);
 

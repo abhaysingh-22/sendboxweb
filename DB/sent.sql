@@ -1,9 +1,9 @@
--- 1. Add delivery columns and yearly recurrence column
+-- 1. Add delivery columns and yearly recurrence column (if not already added)
 ALTER TABLE records
-ADD COLUMN whatsapp_message_id TEXT,
-ADD COLUMN sent_at TIMESTAMPTZ,
-ADD COLUMN error_message TEXT,
-ADD COLUMN last_year_sent INTEGER DEFAULT NULL;
+ADD COLUMN IF NOT EXISTS whatsapp_message_id TEXT,
+ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS error_message TEXT,
+ADD COLUMN IF NOT EXISTS last_year_sent INTEGER DEFAULT NULL;
 
 -- 2. Add description comment (optional)
 COMMENT ON COLUMN records.last_year_sent IS 'Stores the year (e.g. 2026) the yearly message was last sent, initialized as NULL';
@@ -15,12 +15,10 @@ BEGIN
   RETURN QUERY
   SELECT * FROM records
   WHERE 
-    status = 'Pending'
-    OR (
-      EXTRACT(month FROM dob) = c_month
-      AND EXTRACT(day FROM dob) = c_day
-      AND (last_year_sent IS NULL OR last_year_sent < c_year)
-    );
+    dob IS NOT NULL
+    AND EXTRACT(month FROM dob) = c_month
+    AND EXTRACT(day FROM dob) = c_day
+    AND (last_year_sent IS NULL OR last_year_sent < c_year);
 END;
 $$ LANGUAGE plpgsql;
 

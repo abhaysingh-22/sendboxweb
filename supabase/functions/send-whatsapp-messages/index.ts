@@ -22,10 +22,18 @@ serve(async (req) => {
   }
 
   try {
-    const currentYear = new Date().getFullYear();
-    const today = new Date();
-    const currentMonth = today.getMonth() + 1; // 1-12
-    const currentDate = today.getDate(); // 1-31
+    // Determine current date in the application timezone (defaulting to IST - Asia/Kolkata)
+    const timeZone = Deno.env.get("APP_TIMEZONE") || "Asia/Kolkata";
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const [yearStr, monthStr, dayStr] = formatter.format(new Date()).split("-");
+    const currentYear = parseInt(yearStr, 10);
+    const currentMonth = parseInt(monthStr, 10); // 1-12
+    const currentDate = parseInt(dayStr, 10); // 1-31
 
     // Fetch records to send using an RPC function to avoid DATE type casting issues in Postgres
     const { data: records, error: fetchError } = await supabase

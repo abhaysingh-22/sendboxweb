@@ -55,6 +55,9 @@ export default function App() {
   const [totalRecords, setTotalRecords] = useState(0);
   const LIMIT = 15;
 
+  // Filter state for status ('ALL' | 'Sent' | 'Pending')
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
   // Stats state
   const [stats, setStats] = useState({ total: 0, sent: 0, pending: 0 });
 
@@ -82,11 +85,11 @@ export default function App() {
   const fileInputRef = useRef(null);
 
   // Refresh records and stats from Supabase
-  const refreshData = async (page = currentPage) => {
+  const refreshData = async (page = currentPage, filter = statusFilter) => {
     setLoading(true);
 
-    // 1. Fetch paginated records
-    const { data: recs, error: recsError, count } = await fetchRecordsPaginated(page, LIMIT);
+    // 1. Fetch paginated records with filter
+    const { data: recs, error: recsError, count } = await fetchRecordsPaginated(page, LIMIT, filter);
     if (recsError) {
       console.error('Failed to fetch records:', recsError);
       showToast('error', `Failed to load records: ${recsError.message}`);
@@ -125,12 +128,22 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch when page changes and user is logged in
+  // Fetch when page or status filter changes and user is logged in
   useEffect(() => {
     if (isLoggedIn) {
-      refreshData(currentPage);
+      refreshData(currentPage, statusFilter);
     }
-  }, [currentPage, isLoggedIn]);
+  }, [currentPage, statusFilter, isLoggedIn]);
+
+  // Handler to filter records by clicking stats cards
+  const handleFilterChange = (filter) => {
+    if (statusFilter === filter && filter !== 'ALL') {
+      setStatusFilter('ALL');
+    } else {
+      setStatusFilter(filter);
+    }
+    setCurrentPage(1);
+  };
 
   // Show Toast Helper
   const showToast = (type, message) => {
@@ -488,13 +501,51 @@ export default function App() {
           totalEntries={stats.total}
           sentTillNow={stats.sent}
           pendingCount={stats.pending}
+          activeFilter={statusFilter}
+          onFilterChange={handleFilterChange}
         />
 
         {/* Detailed Status Table Section */}
         <section className="mt-10">
-          <h2 className="text-lg font-bold text-gray-900 mb-5">
-            Detailed Delivery Status
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-lg font-bold text-gray-900">
+                Detailed Delivery Status
+              </h2>
+              {statusFilter !== 'ALL' && (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                    statusFilter === 'Sent'
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  <span>
+                    Filtered: <strong className="font-bold">{statusFilter}</strong> ({totalRecords})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange('ALL')}
+                    className="hover:opacity-75 cursor-pointer ml-1 font-bold text-xs p-0.5 rounded-full hover:bg-black/5 leading-none inline-flex items-center justify-center"
+                    title="Clear filter and show all"
+                    aria-label="Clear filter"
+                  >
+                    ✕
+                  </button>
+                </span>
+              )}
+            </div>
+
+            {statusFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => handleFilterChange('ALL')}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+              >
+                ← View All Records ({stats.total})
+              </button>
+            )}
+          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16 text-gray-400">
@@ -510,6 +561,7 @@ export default function App() {
                 records={records}
                 onEditClick={openEditModal}
                 onDeleteClick={openDeleteModal}
+                statusFilter={statusFilter}
               />
 
               {/* Pagination Controls */}
